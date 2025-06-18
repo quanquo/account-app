@@ -1,0 +1,241 @@
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.search-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 20px;
+}
+
+.logo {
+  margin-bottom: 30px;
+}
+
+.logo-text {
+  color: #4285f4;
+  font-size: 90px;
+  font-weight: 500;
+  letter-spacing: -3px;
+}
+
+.search-bar-container {
+  width: 100%;
+  max-width: 580px;
+  margin-bottom: 30px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 44px;
+  border: 1px solid #dfe1e5;
+  border-radius: 24px;
+  padding: 0 15px;
+}
+
+.search-bar:hover {
+  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+  border-color: rgba(223, 225, 229, 0);
+}
+
+.search-input {
+  flex: 1;
+  height: 100%;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  padding: 0 15px;
+}
+
+.search-icon, .mic-icon {
+  color: #9aa0a6;
+  font-size: 18px;
+}
+
+.buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.search-button {
+  background-color: #f8f9fa;
+  border: 1px solid #f8f9fa;
+  border-radius: 4px;
+  color: #3c4043;
+  font-size: 14px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.search-button:hover {
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  border: 1px solid #dadce0;
+}
+
+footer {
+  background-color: #f2f2f2;
+  padding: 15px;
+  border-top: 1px solid #e4e4e4;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.footer-links a {
+  color: #70757a;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+/* Account Info Box Styling */
+.account-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin: 15px 0 25px 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  max-width: 580px;
+  width: 100%;
+  transition: background-color 0.3s ease;
+}
+
+.account-info.loading {
+  background-color: #f5f5f5;
+}
+
+.account-info.error {
+  background-color: #fef7f6;
+  border: 1px solid #fdded9;
+}
+
+.account-details {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.account-label {
+  font-weight: 500;
+  margin-right: 12px;
+  color: #202124;
+  white-space: nowrap;
+}
+
+.account-id {
+  font-family: "Roboto Mono", monospace;
+  background-color: #e8f0fe;
+  color: #1a73e8;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-right: 12px;
+  min-width: 60px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.account-info.error .account-id {
+  background-color: #fdefe9;
+  color: #d93025;
+}
+
+.account-description {
+  color: #5f6368;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-info.error .account-description {
+  color: #d93025;
+}
+
+/* Account Actions Styling */
+.account-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 15px;
+}
+
+.action-button {
+  background: none;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 18px;
+}
+
+.action-button:hover {
+  background-color: rgba(60, 64, 67, 0.08);
+}
+
+.action-button:active {
+  background-color: rgba(60, 64, 67, 0.12);
+}
+
+.refresh-button span {
+  font-size: 18px;
+}
+
+.deposit-button span {
+  font-size: 18px;
+}
+
+.withdraw-button span {
+  font-size: 18px;
+}
+
+/* Disable style */
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-button:disabled:hover {
+  background-color: transparent;
+}
+
+/* Optional: Spin animation for refresh */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.account-info.loading .refresh-button span {
+  animation: spin 1.5s linear infinite;
+}
+

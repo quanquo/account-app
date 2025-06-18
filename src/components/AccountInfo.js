@@ -3,6 +3,7 @@ import React from 'react';
 function AccountInfo({ 
   accountNumber, 
   description, 
+  saldo,
   isLoading, 
   error, 
   onRefresh, 
@@ -12,12 +13,15 @@ function AccountInfo({
   return (
     <div className={`account-info ${isLoading ? 'loading' : ''} ${error ? 'error' : ''}`}>
       <div className="account-details">
-        <div className="account-label">Account:</div>
         <div className="account-id">
           {isLoading ? '...' : accountNumber}
         </div>
         <div className="account-description">
           {error || description}
+        </div>
+        <div className="saldo-label">Saldo</div>
+        <div className="saldo-amount">
+          {isLoading ? '...' : saldo}
         </div>
       </div>
       

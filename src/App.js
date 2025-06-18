@@ -8,7 +8,8 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [accountData, setAccountData] = useState({
     accountNumber: '',
-    description: 'Lade Daten...'
+    description: 'Lade Daten...',
+    saldo: 'Lade Saldo...'
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,7 +28,8 @@ function App() {
         const data = await response.json();
         setAccountData({
           accountNumber: data.accountNumber || 'Keine Nummer',
-          description: data.description || 'Keine Beschreibung'
+          description: data.description || 'Keine Beschreibung',
+          balance: data.balance || 'Kein Saldo'
         });
         setError(null);
       } catch (err) {
@@ -66,6 +68,7 @@ function App() {
         <AccountInfo 
           accountNumber={accountData.accountNumber}
           description={accountData.description}
+          saldo={accountData.balance}
           isLoading={isLoading}
           error={error}
         />

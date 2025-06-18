@@ -161,6 +161,18 @@ footer {
   white-space: nowrap;
 }
 
+.saldo-amount {
+  font-family: "Roboto Mono", monospace;
+  background-color: #e8f0fe;
+  color: #1a73e8;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-right: 12px;
+  min-width: 60px;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .account-info.error .account-id {
   background-color: #fdefe9;
   color: #d93025;

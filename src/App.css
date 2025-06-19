@@ -251,3 +251,59 @@ footer {
   animation: spin 1.5s linear infinite;
 }
 
+/* Instruments Table Styles */
+.transactions-table-container {
+  margin: 30px auto;
+  max-width: 800px; /* Increased to accommodate more columns */
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+  padding: 15px;
+  background-color: white;
+  overflow-x: auto; /* For mobile responsiveness */
+}
+
+.transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.transactions-table th {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 2px solid #f1f3f4;
+  color: #5f6368;
+  font-weight: 500;
+}
+
+.transactions-table td {
+  padding: 10px;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.transactions-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.transactions-table td:nth-child(2),
+.transactions-table td:nth-child(3),
+.transactions-table td:nth-child(4) {
+  text-align: right;
+}
+
+.transactions-table th:nth-child(2),
+.transactions-table th:nth-child(3),
+.transactions-table th:nth-child(4) {
+  text-align: right;
+}
+
+/* Additional styles for the Total column */
+.transactions-table td:last-child {
+  text-align: right;
+  font-weight: 600;
+  color: #1a73e8; /* Google blue */
+}
+
+.transactions-table th:last-child {
+  text-align: right;
+}

@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import SearchBar from './components/SearchBar';
 import Logo from './components/Logo';
 import AccountInfo from './components/AccountInfo';
+import DepositModal from './components/DepositModal';
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,27 +15,28 @@ function App() {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+
   // API-Aufruf, um Account-Daten zu laden
   const fetchAccountData = async () => {
     try {
       setIsLoading(true);
       const response = await fetch('http://localhost:8080/api/accounts/8920');
-      
+
       if (!response.ok) {
         throw new Error(`API-Fehler: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setAccountData({
         accountNumber: data.accountNumber || 'Keine Nummer',
         description: data.description || 'Keine Beschreibung',
         balance: data.balance || 'Kein Saldo'
       });
-      
+
       // Setze die Transaktionen aus der API-Antwort
       setTransactions(data.transactions || []);
-      
+
       setError(null);
     } catch (err) {
       console.error('Fehler beim Abrufen der Account-Daten:', err);
@@ -53,7 +54,7 @@ function App() {
   // Initialer Aufruf beim Laden der Komponente
   useEffect(() => {
     fetchAccountData();
-  }, []); 
+  }, []);
 
   // Refresh-Handler für den Button
   const handleRefresh = () => {
@@ -66,11 +67,42 @@ function App() {
     // Hier würde normalerweise die eigentliche Suchanfrage stattfinden
   };
 
-  // Placeholder für die noch nicht implementierten Funktionen
+  // Öffnet den Einzahlungsdialog
   const handleDeposit = () => {
-    alert('Einzahlen-Funktion noch nicht implementiert');
+    setIsDepositModalOpen(true);
   };
 
+  // Verarbeitet die Einzahlung nach Absenden des Formulars
+  const handleDepositSubmit = async (depositData) => {
+    try {
+      setIsLoading(true);
+
+      const response = await fetch('http://localhost:8080/api/accounts/deposit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(depositData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Einzahlung fehlgeschlagen: ${response.statusText}`);
+      }
+
+      // Nach erfolgreicher Einzahlung die Kontodaten aktualisieren
+      await fetchAccountData(); // Daten neu laden
+
+      // Erfolgsmeldung im Modal anzeigen
+      return { success: true, message: 'Einzahlung erfolgreich!' };
+
+    } catch (error) {
+      console.error('Fehler bei der Einzahlung:', error);
+      return { success: false, message: `Fehler: ${error.message}` };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // Placeholder für die Auszahlen-Funktion
   const handleWithdraw = () => {
     alert('Auszahlen-Funktion noch nicht implementiert');
   };
@@ -79,7 +111,7 @@ function App() {
   const formatAmount = (amount, type) => {
     const isWithdrawal = type === 'W';
     const amountValue = isWithdrawal ? `-${amount}` : amount;
-    
+
     return (
       <span style={{ color: isWithdrawal ? 'red' : 'inherit' }}>
         {amountValue}
@@ -91,14 +123,14 @@ function App() {
     <div className="app">
       <div className="search-container">
         <Logo />
-        <SearchBar 
+        <SearchBar
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onSearch={handleSearch}
         />
-        
+
         {/* Account Information Box mit Lade-Status */}
-        <AccountInfo 
+        <AccountInfo
           accountNumber={accountData.accountNumber}
           description={accountData.description}
           saldo={accountData.balance}
@@ -108,8 +140,16 @@ function App() {
           onDeposit={handleDeposit}
           onWithdraw={handleWithdraw}
         />
-      
-         {/* Transaction Table */}
+
+        {/* Einzahlungsdialog */}
+        <DepositModal
+          isOpen={isDepositModalOpen}
+          onClose={() => setIsDepositModalOpen(false)}
+          onSubmit={handleDepositSubmit}
+          accountNumber={accountData.accountNumber}
+        />
+
+        {/* Transaction Table */}
         <div className="transaction-table-container">
           <table className="transactions-table">
             <thead>
@@ -152,4 +192,3 @@ function App() {
 }
 
 export default App;
-

@@ -6,7 +6,7 @@ function LoginPage({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,76 +16,162 @@ function LoginPage({ onLogin }) {
     setError('');
     setSuccess('');
 
-    // Validierung
-    if (!username || !password) {
-      setError('Bitte alle Pflichtfelder ausfüllen');
-      return;
-    }
-
-    // Bei Registrierung: Prüfe, ob Passwörter übereinstimmen
-    if (!isLogin && password !== confirmPassword) {
-      setError('Passwörter stimmen nicht überein');
-      return;
+    // Validierung für Login
+    if (isLogin) {
+      if (!username || !password) {
+        setError('Bitte alle Pflichtfelder ausfüllen');
+        return;
+      }
+    } else {
+      // Validierung für Registrierung
+      if (!username || !fullName) {
+        setError('Bitte alle Pflichtfelder ausfüllen');
+        return;
+      }
     }
 
     setIsSubmitting(true);
 
     try {
-      // Hier würde normalerweise ein API-Aufruf erfolgen
-      // Beispiel-API-Call (simuliert)
-      const endpoint = isLogin ? '/api/login' : '/api/register';
-
-      // Simulierter API-Aufruf
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-
       if (isLogin) {
-        try {
-          // Zunächst Login überprüfen
-          if (username === username && password === 'admin') {
-            setSuccess('Anmeldung erfolgreich');
-
+        // Zunächst Login-Credentials überprüfen
+        if (username === username && password === 'admin') {
+          try {
             // API aufrufen, um die Kontonummer des Benutzers zu erhalten
-            try {
-              const userResponse = await fetch(`http://localhost:8080/api/users/${username}`);
+            const userApiUrl = `http://localhost:8080/api/users/${username}`;
+            const userResponse = await fetch(userApiUrl);
 
-              if (!userResponse.ok) {
-                throw new Error('Fehler beim Abrufen der Benutzerdaten');
+            if (!userResponse.ok) {
+              const errorText = await userResponse.text();
+              
+              // Wenn User API fehlschlägt, dann ist das ein echter Fehler
+              if (userResponse.status === 404) {
+                throw new Error(`Benutzer '${username}' nicht gefunden. Bitte registrieren Sie sich zuerst.`);
+              } else if (userResponse.status >= 500) {
+                throw new Error('Server ist nicht erreichbar. Bitte versuchen Sie es später erneut.');
+              } else {
+                throw new Error(`Fehler beim Abrufen der Benutzerdaten: ${userResponse.status} - ${errorText}`);
               }
-
-              const userData = await userResponse.json();
-
-              setTimeout(() => {
-                // Benutzer samt Kontonummer an Parent-Komponente übergeben
-                onLogin({
-                  username,
-                  accountNumber: userData.accountNumber
-                });
-              }, 1000);
-            } catch (error) {
-              console.error('Fehler beim Laden der Benutzerdaten:', error);
-              // Falls API-Aufruf fehlschlägt, trotzdem einloggen aber ohne Kontonummer
-              setTimeout(() => {
-                onLogin({ username });
-              }, 1000);
             }
-          } else {
-            setError('Ungültige Anmeldedaten');
+
+            const userData = await userResponse.json();
+            
+            // Extract account number from the API response structure
+            let accountNumber = null;
+            
+            // Check for bankAccount.accountNumber (based on your API response)
+            if (userData.bankAccount && userData.bankAccount.accountNumber) {
+              accountNumber = userData.bankAccount.accountNumber;
+            }
+            // Fallback checks for other possible structures
+            else if (userData.accountNumber) {
+              accountNumber = userData.accountNumber;
+            } else if (userData.accountId) {
+              accountNumber = userData.accountId;
+            } else if (userData.account_number) {
+              accountNumber = userData.account_number;
+            } else if (userData.id) {
+              accountNumber = userData.id;
+            } else if (userData.userId) {
+              accountNumber = userData.userId;
+            } else if (userData.kontonummer) {
+              accountNumber = userData.kontonummer;
+            }
+            // Check nested account objects
+            else if (userData.account) {
+              if (typeof userData.account === 'object') {
+                accountNumber = userData.account.accountNumber || 
+                              userData.account.accountId || 
+                              userData.account.id || 
+                              userData.account.number;
+              }
+            }
+            // Check if accounts is an array
+            else if (userData.accounts && Array.isArray(userData.accounts)) {
+              if (userData.accounts.length > 0) {
+                const firstAccount = userData.accounts[0];
+                accountNumber = firstAccount.accountNumber || 
+                              firstAccount.accountId || 
+                              firstAccount.id || 
+                              firstAccount.number;
+              }
+            }
+
+            // Wenn immer noch keine Kontonummer gefunden wurde
+            if (!accountNumber || accountNumber === '') {
+              throw new Error('Keine Kontonummer für diesen Benutzer gefunden. Bitte wenden Sie sich an den Administrator.');
+            }
+
+            // Verify the account number is valid (not empty, null, undefined)
+            if (!accountNumber || accountNumber === '' || accountNumber === 'null' || accountNumber === 'undefined') {
+              throw new Error('Keine gültige Kontonummer gefunden');
+            }
+
+            setSuccess('Anmeldung erfolgreich');
+            setTimeout(() => {
+              onLogin({
+                username,
+                accountNumber: String(accountNumber) // Ensure it's a string
+              });
+            }, 1000);
+
+          } catch (error) {
+            setError(error.message);
           }
-        } catch (err) {
-          setError('Ein Fehler ist beim Login aufgetreten. Bitte versuchen Sie es später erneut.');
+        } else {
+          setError('Ungültige Anmeldedaten');
         }
       } else {
         // Bei Registrierung
-        setSuccess('Registrierung erfolgreich! Sie können sich jetzt anmelden.');
-        setIsLogin(true);
-        setUsername('');
-        setPassword('');
-        setConfirmPassword('');
+        try {
+          // Schritt 1: User anlegen
+          const registerResponse = await fetch('http://localhost:8080/api/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username,
+              name: fullName
+            })
+          });
+
+          if (!registerResponse.ok) {
+            throw new Error(`Benutzer-Registrierung fehlgeschlagen: ${registerResponse.statusText}`);
+          }
+
+          // Schritt 2: Account für den User anlegen
+          // Generiere zufällige 10-stellige Kontonummer
+          const accountNumber = Math.floor(1000000000 + Math.random() * 9000000000);
+
+          const accountResponse = await fetch('http://localhost:8080/api/accounts', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username,
+              accountNumber: accountNumber,
+              description: "Basic Account",
+              cashBalance: 0
+            })
+          });
+
+          if (!accountResponse.ok) {
+            throw new Error(`Account-Erstellung fehlgeschlagen: ${accountResponse.statusText}`);
+          }
+
+          setSuccess('Registrierung erfolgreich! Sie können sich jetzt anmelden.');
+          setIsLogin(true);
+          setUsername('');
+          setFullName('');
+        } catch (error) {
+          setError(`Registrierung fehlgeschlagen: ${error.message}`);
+        }
       }
 
     } catch (err) {
-      setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
+      setError('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
     } finally {
       setIsSubmitting(false);
     }
@@ -95,6 +181,10 @@ function LoginPage({ onLogin }) {
     setIsLogin(!isLogin);
     setError('');
     setSuccess('');
+    // Reset all form fields when switching modes
+    setUsername('');
+    setPassword('');
+    setFullName('');
   };
 
   return (
@@ -121,26 +211,26 @@ function LoginPage({ onLogin }) {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Passwort:</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isSubmitting}
-            />
-          </div>
-
-          {!isLogin && (
+          {isLogin ? (
             <div className="form-group">
-              <label htmlFor="confirmPassword">Passwort bestätigen:</label>
+              <label htmlFor="password">Passwort:</label>
               <input
                 type="password"
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+          ) : (
+            <div className="form-group">
+              <label htmlFor="fullName">Vollständiger Name:</label>
+              <input
+                type="text"
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 required
                 disabled={isSubmitting}
               />

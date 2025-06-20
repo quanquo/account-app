@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import SearchBar from './components/SearchBar';
 import Logo from './components/Logo';
@@ -18,12 +18,14 @@ function App({ user, onLogout }) {
   const [error, setError] = useState(null);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
-  
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef();
+
   // API-Aufruf, um Account-Daten zu laden
   const fetchAccountData = async () => {
     const possibleAccountKeys = ['accountNumber', 'accountId', 'id', 'account', 'number'];
     let accountNumber = null;
-    
+
     if (user) {
       for (const key of possibleAccountKeys) {
         if (user[key]) {
@@ -32,17 +34,17 @@ function App({ user, onLogout }) {
         }
       }
     }
-    
+
     if (!accountNumber) {
       accountNumber = user?.accountNumber;
     }
-    
+
     if (!user) {
       setError('Benutzer nicht verfügbar');
       setIsLoading(false);
       return;
     }
-    
+
     if (!accountNumber || accountNumber === '') {
       setError('Keine Kontonummer verfügbar - Bitte prüfen Sie die Anmeldedaten');
       setIsLoading(false);
@@ -52,30 +54,30 @@ function App({ user, onLogout }) {
     try {
       setIsLoading(true);
       const apiUrl = `http://localhost:8080/api/accounts/${accountNumber}`;
-      
+
       const response = await fetch(apiUrl);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`API-Fehler: ${response.status} - ${response.statusText} - ${errorText}`);
       }
-      
+
       const data = await response.json();
-      
+
       setAccountData({
         accountNumber: data.accountNumber || accountNumber || 'Keine Nummer',
         description: data.description || 'Keine Beschreibung',
         balance: data.balance || data.saldo || 'Kein Saldo'
       });
-      
+
       // Setze die Transaktionen aus der API-Antwort und sortiere sie nach Datum absteigend
       const sortedTransactions = [...(data.transactions || [])].sort((a, b) => {
         return new Date(b.transactionTimeStamp) - new Date(a.transactionTimeStamp);
       });
-      
+
       setTransactions(sortedTransactions);
       setError(null);
-      
+
     } catch (err) {
       // Verwende Mock-Daten für Demo-Zwecke wenn API nicht verfügbar
       setAccountData({
@@ -83,7 +85,7 @@ function App({ user, onLogout }) {
         description: 'Demo-Konto (API nicht erreichbar)',
         balance: '1,234.56 €'
       });
-      
+
       // Mock-Transaktionen für Demo
       const mockTransactions = [
         {
@@ -101,7 +103,7 @@ function App({ user, onLogout }) {
           transactionType: 'W'
         }
       ];
-      
+
       setTransactions(mockTransactions);
       setError(null);
     } finally {
@@ -134,15 +136,16 @@ function App({ user, onLogout }) {
 
   const handleLogout = () => {
     onLogout();
+    setIsDropdownOpen(false);
   };
 
   // Verarbeitet die Einzahlung nach Absenden des Formulars
   const handleDepositSubmit = async (depositData) => {
     try {
       setIsLoading(true);
-      
+
       const accountNumber = user?.accountNumber || user?.accountId || user?.id;
-      
+
       const response = await fetch('http://localhost:8080/api/accounts/deposit', {
         method: 'POST',
         headers: {
@@ -154,15 +157,15 @@ function App({ user, onLogout }) {
           accountNumber: accountNumber
         })
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Einzahlung fehlgeschlagen: ${response.statusText}`);
       }
-      
+
       await fetchAccountData();
       return { success: true, message: 'Einzahlung erfolgreich!' };
-      
+
     } catch (error) {
       return { success: false, message: `Fehler: ${error.message}` };
     } finally {
@@ -174,9 +177,9 @@ function App({ user, onLogout }) {
   const handleWithdrawSubmit = async (withdrawData) => {
     try {
       setIsLoading(true);
-      
+
       const accountNumber = user?.accountNumber || user?.accountId || user?.id;
-      
+
       const response = await fetch('http://localhost:8080/api/accounts/withdraw', {
         method: 'POST',
         headers: {
@@ -188,15 +191,15 @@ function App({ user, onLogout }) {
           accountNumber: accountNumber
         })
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Auszahlung fehlgeschlagen: ${response.statusText}`);
       }
-      
+
       await fetchAccountData();
       return { success: true, message: 'Auszahlung erfolgreich!' };
-      
+
     } catch (error) {
       return { success: false, message: `Fehler: ${error.message}` };
     } finally {
@@ -208,7 +211,7 @@ function App({ user, onLogout }) {
   const formatAmount = (amount, type) => {
     const isWithdrawal = type === 'W';
     const amountValue = isWithdrawal ? `-${amount}` : amount;
-    
+
     return (
       <span style={{ color: isWithdrawal ? 'red' : 'inherit' }}>
         {amountValue}
@@ -216,24 +219,47 @@ function App({ user, onLogout }) {
     );
   };
 
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsDropdownOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="app">
       <div className="search-container">
         <div className="header-container">
           <Logo />
-          <div className="user-info">
-            <span>Angemeldet als: {user?.username || 'Unbekannt'}</span>
-            <button className="logout-button" onClick={handleLogout}>Abmelden</button>
+          <div className="user-info" ref={dropdownRef}>
+            <button className="user-icon-button" onClick={toggleDropdown}>👤</button>
+            {isDropdownOpen && (
+              <div className="dropdown-menu">
+                <div className="dropdown-item">{user?.username || 'Unbekannt'}</div>
+                <div className="dropdown-item">{user?.fullname || 'Unbekannt'}</div>
+                <button className="dropdown-item logout-button" onClick={handleLogout}>Abmelden</button>
+              </div>
+            )}
           </div>
         </div>
-        
-        <SearchBar 
+
+        <SearchBar
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onSearch={handleSearch}
         />
-        
-        <AccountInfo 
+
+        <AccountInfo
           accountNumber={accountData.accountNumber}
           description={accountData.description}
           saldo={accountData.balance}
@@ -243,21 +269,21 @@ function App({ user, onLogout }) {
           onDeposit={handleDeposit}
           onWithdraw={handleWithdraw}
         />
-      
-        <DepositModal 
+
+        <DepositModal
           isOpen={isDepositModalOpen}
           onClose={() => setIsDepositModalOpen(false)}
           onSubmit={handleDepositSubmit}
           accountNumber={accountData.accountNumber}
         />
 
-        <WithdrawModal 
+        <WithdrawModal
           isOpen={isWithdrawModalOpen}
           onClose={() => setIsWithdrawModalOpen(false)}
           onSubmit={handleWithdrawSubmit}
           accountNumber={accountData.accountNumber}
         />
-      
+
         <div className="transaction-table-container">
           <table className="transactions-table">
             <thead>

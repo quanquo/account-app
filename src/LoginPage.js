@@ -55,6 +55,8 @@ function LoginPage({ onLogin }) {
             }
 
             const userData = await userResponse.json();
+
+            let fullname = userData.name;
             
             // Extract account number from the API response structure
             let accountNumber = null;
@@ -111,6 +113,7 @@ function LoginPage({ onLogin }) {
             setTimeout(() => {
               onLogin({
                 username,
+                fullname,
                 accountNumber: String(accountNumber) // Ensure it's a string
               });
             }, 1000);

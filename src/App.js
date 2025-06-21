@@ -14,6 +14,7 @@ function App({ user, onLogout }) {
     saldo: 'Lade Saldo...'
   });
   const [transactions, setTransactions] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
@@ -21,7 +22,6 @@ function App({ user, onLogout }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef();
 
-  // API-Aufruf, um Account-Daten zu laden
   const fetchAccountData = async () => {
     const possibleAccountKeys = ['accountNumber', 'accountId', 'id', 'account', 'number'];
     let accountNumber = null;
@@ -70,23 +70,20 @@ function App({ user, onLogout }) {
         balance: data.balance || data.saldo || 'Kein Saldo'
       });
 
-      // Setze die Transaktionen aus der API-Antwort und sortiere sie nach Datum absteigend
       const sortedTransactions = [...(data.transactions || [])].sort((a, b) => {
         return new Date(b.transactionTimeStamp) - new Date(a.transactionTimeStamp);
       });
 
       setTransactions(sortedTransactions);
+      setFilteredTransactions(sortedTransactions); // Initial für Anzeige
       setError(null);
-
     } catch (err) {
-      // Verwende Mock-Daten für Demo-Zwecke wenn API nicht verfügbar
       setAccountData({
         accountNumber: accountNumber || '1234',
         description: 'Demo-Konto (API nicht erreichbar)',
         balance: '1,234.56 €'
       });
 
-      // Mock-Transaktionen für Demo
       const mockTransactions = [
         {
           uuid: 'mock-1',
@@ -105,25 +102,44 @@ function App({ user, onLogout }) {
       ];
 
       setTransactions(mockTransactions);
+      setFilteredTransactions(mockTransactions);
       setError(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initialer Aufruf beim Laden der Komponente
   useEffect(() => {
     fetchAccountData();
   }, [user]);
 
-  // Refresh-Handler für den Button
   const handleRefresh = () => {
     fetchAccountData();
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    alert(`Sie haben nach "${searchQuery}" gesucht`);
+
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      setFilteredTransactions(transactions);
+      return;
+    }
+
+    const results = transactions.filter((transaction) => {
+      const text = (transaction.text || '').toLowerCase();
+      const date = new Date(transaction.transactionTimeStamp).toLocaleDateString().toLowerCase();
+      const amount = String(transaction.amount || '').toLowerCase();
+
+      return (
+        text.includes(query) ||
+        date.includes(query) ||
+        amount.includes(query)
+      );
+    });
+
+    setFilteredTransactions(results);
   };
 
   const handleDeposit = () => {
@@ -139,7 +155,6 @@ function App({ user, onLogout }) {
     setIsDropdownOpen(false);
   };
 
-  // Verarbeitet die Einzahlung nach Absenden des Formulars
   const handleDepositSubmit = async (depositData) => {
     try {
       setIsLoading(true);
@@ -165,7 +180,6 @@ function App({ user, onLogout }) {
 
       await fetchAccountData();
       return { success: true, message: 'Einzahlung erfolgreich!' };
-
     } catch (error) {
       return { success: false, message: `Fehler: ${error.message}` };
     } finally {
@@ -173,7 +187,6 @@ function App({ user, onLogout }) {
     }
   };
 
-  // Verarbeitet die Auszahlung nach Absenden des Formulars
   const handleWithdrawSubmit = async (withdrawData) => {
     try {
       setIsLoading(true);
@@ -199,7 +212,6 @@ function App({ user, onLogout }) {
 
       await fetchAccountData();
       return { success: true, message: 'Auszahlung erfolgreich!' };
-
     } catch (error) {
       return { success: false, message: `Fehler: ${error.message}` };
     } finally {
@@ -207,7 +219,6 @@ function App({ user, onLogout }) {
     }
   };
 
-  // Formatiert den Betrag je nach Transaktionstyp
   const formatAmount = (amount, type) => {
     const isWithdrawal = type === 'W';
     const amountValue = isWithdrawal ? `-${amount}` : amount;
@@ -295,15 +306,16 @@ function App({ user, onLogout }) {
               </tr>
             </thead>
             <tbody>
-              {transactions.map((transaction) => (
-                <tr key={transaction.uuid}>
-                  <td>{transaction.text || '-'}</td>
-                  <td>{new Date(transaction.transactionTimeStamp).toLocaleDateString()}</td>
-                  <td>{formatAmount(transaction.amount, transaction.transactionType)}</td>
-                  <td>{transaction.uuid.substring(0, 8)}...</td>
-                </tr>
-              ))}
-              {transactions.length === 0 && (
+              {filteredTransactions.length > 0 ? (
+                filteredTransactions.map((transaction) => (
+                  <tr key={transaction.uuid}>
+                    <td>{transaction.text || '-'}</td>
+                    <td>{new Date(transaction.transactionTimeStamp).toLocaleDateString()}</td>
+                    <td>{formatAmount(transaction.amount, transaction.transactionType)}</td>
+                    <td>{transaction.uuid.substring(0, 8)}...</td>
+                  </tr>
+                ))
+              ) : (
                 <tr>
                   <td colSpan="4">Keine Transaktionen vorhanden</td>
                 </tr>
@@ -311,8 +323,8 @@ function App({ user, onLogout }) {
             </tbody>
           </table>
         </div>
-
       </div>
+
       <footer>
         <div className="footer-links">
           <a href="#">Über Google</a>

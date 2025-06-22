@@ -84,7 +84,8 @@ function LoginPage({ onLogin }) {
               onLogin({
                 username,
                 fullname,
-                accountNumber: String(accountNumber)
+                accountNumber: String(accountNumber),
+                language: i18n.language
               });
             }, 1000);
           } catch (error) {

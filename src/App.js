@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import './App.css';
+import i18n from './i18n';
 import SearchBar from './components/SearchBar';
 import Logo from './components/Logo';
 import AccountInfo from './components/AccountInfo';
@@ -7,11 +9,12 @@ import DepositModal from './components/DepositModal';
 import WithdrawModal from './components/WithdrawModal';
 
 function App({ user, onLogout }) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [accountData, setAccountData] = useState({
     accountNumber: '',
-    description: 'Lade Daten...',
-    saldo: 'Lade Saldo...'
+    description: t('loadingData'),
+    balance: t('loadingBalance')
   });
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
@@ -23,78 +26,63 @@ function App({ user, onLogout }) {
   const dropdownRef = useRef();
 
   const fetchAccountData = async () => {
-    const possibleAccountKeys = ['accountNumber', 'accountId', 'id', 'account', 'number'];
-    let accountNumber = null;
-
-    if (user) {
-      for (const key of possibleAccountKeys) {
-        if (user[key]) {
-          accountNumber = user[key];
-          break;
-        }
-      }
-    }
-
-    if (!accountNumber) {
-      accountNumber = user?.accountNumber;
-    }
+    const accountKeys = ['accountNumber', 'accountId', 'id', 'account', 'number'];
+    let accountNumber = accountKeys.find(key => user?.[key]) && user[accountKeys.find(key => user?.[key])];
 
     if (!user) {
-      setError('Benutzer nicht verfügbar');
+      setError(t('noUser'));
       setIsLoading(false);
       return;
     }
 
-    if (!accountNumber || accountNumber === '') {
-      setError('Keine Kontonummer verfügbar - Bitte prüfen Sie die Anmeldedaten');
+    if (!accountNumber) {
+      setError(t('noNumber'));
       setIsLoading(false);
       return;
     }
 
     try {
       setIsLoading(true);
-      const apiUrl = `http://localhost:8080/api/accounts/${accountNumber}`;
-
-      const response = await fetch(apiUrl);
+      const response = await fetch(`http://localhost:8080/api/accounts/${accountNumber}`);
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`API-Fehler: ${response.status} - ${response.statusText} - ${errorText}`);
+        throw new Error(`API error: ${response.status} - ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
 
       setAccountData({
-        accountNumber: data.accountNumber || accountNumber || 'Keine Nummer',
-        description: data.description || 'Keine Beschreibung',
-        balance: data.balance || data.saldo || 'Kein Saldo'
+        accountNumber: data.accountNumber || accountNumber,
+        description: data.description || t('noDescription'),
+        balance: data.balance || data.saldo || t('noBalance')
       });
 
-      const sortedTransactions = [...(data.transactions || [])].sort((a, b) => {
-        return new Date(b.transactionTimeStamp) - new Date(a.transactionTimeStamp);
-      });
+      const sortedTransactions = [...(data.transactions || [])].sort(
+        (a, b) => new Date(b.transactionTimeStamp) - new Date(a.transactionTimeStamp)
+      );
 
       setTransactions(sortedTransactions);
-      setFilteredTransactions(sortedTransactions); // Initial für Anzeige
+      setFilteredTransactions(sortedTransactions);
       setError(null);
     } catch (err) {
       setAccountData({
         accountNumber: accountNumber || '1234',
-        description: 'Demo-Konto (API nicht erreichbar)',
+        description: t('demoAccount'),
         balance: '1,234.56 €'
       });
 
       const mockTransactions = [
         {
           uuid: 'mock-1',
-          text: 'Demo Einzahlung',
+          text: t('demoDeposit'),
           transactionTimeStamp: new Date().toISOString(),
           amount: '100.00',
           transactionType: 'D'
         },
         {
           uuid: 'mock-2',
-          text: 'Demo Auszahlung',
+          text: t('demoWithdraw'),
           transactionTimeStamp: new Date(Date.now() - 86400000).toISOString(),
           amount: '50.00',
           transactionType: 'W'
@@ -110,16 +98,17 @@ function App({ user, onLogout }) {
   };
 
   useEffect(() => {
+  if (user?.language && user.language !== i18n.language) {
+    i18n.changeLanguage(user.language);
+  }
+}, [user]);
+
+  useEffect(() => {
     fetchAccountData();
   }, [user]);
 
-  const handleRefresh = () => {
-    fetchAccountData();
-  };
-
   const handleSearch = (e) => {
     e.preventDefault();
-
     const query = searchQuery.trim().toLowerCase();
 
     if (!query) {
@@ -127,93 +116,59 @@ function App({ user, onLogout }) {
       return;
     }
 
-    const results = transactions.filter((transaction) => {
-      const text = (transaction.text || '').toLowerCase();
-      const date = new Date(transaction.transactionTimeStamp).toLocaleDateString().toLowerCase();
-      const amount = String(transaction.amount || '').toLowerCase();
-
-      return (
-        text.includes(query) ||
-        date.includes(query) ||
-        amount.includes(query)
-      );
+    const results = transactions.filter((t) => {
+      const text = (t.text || '').toLowerCase();
+      const date = new Date(t.transactionTimeStamp).toLocaleDateString().toLowerCase();
+      const amount = String(t.amount || '').toLowerCase();
+      return text.includes(query) || date.includes(query) || amount.includes(query);
     });
 
     setFilteredTransactions(results);
   };
 
-  const handleDeposit = () => {
-    setIsDepositModalOpen(true);
-  };
-
-  const handleWithdraw = () => {
-    setIsWithdrawModalOpen(true);
-  };
-
-  const handleLogout = () => {
-    onLogout();
-    setIsDropdownOpen(false);
-  };
-
-  const handleDepositSubmit = async (depositData) => {
+  const handleDepositSubmit = async (data) => {
     try {
       setIsLoading(true);
-
       const accountNumber = user?.accountNumber || user?.accountId || user?.id;
 
       const response = await fetch('http://localhost:8080/api/accounts/deposit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...depositData,
-          accountId: accountNumber,
-          accountNumber: accountNumber
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, accountId: accountNumber, accountNumber })
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Einzahlung fehlgeschlagen: ${response.statusText}`);
+        throw new Error(t('depositFailed'));
       }
 
       await fetchAccountData();
-      return { success: true, message: 'Einzahlung erfolgreich!' };
+      return { success: true, message: t('depositSuccess') };
     } catch (error) {
-      return { success: false, message: `Fehler: ${error.message}` };
+      return { success: false, message: `${t('error')}: ${error.message}` };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleWithdrawSubmit = async (withdrawData) => {
+  const handleWithdrawSubmit = async (data) => {
     try {
       setIsLoading(true);
-
       const accountNumber = user?.accountNumber || user?.accountId || user?.id;
 
       const response = await fetch('http://localhost:8080/api/accounts/withdraw', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...withdrawData,
-          accountId: accountNumber,
-          accountNumber: accountNumber
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, accountId: accountNumber, accountNumber })
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Auszahlung fehlgeschlagen: ${response.statusText}`);
+        throw new Error(t('withdrawFailed'));
       }
 
       await fetchAccountData();
-      return { success: true, message: 'Auszahlung erfolgreich!' };
+      return { success: true, message: t('withdrawSuccess') };
     } catch (error) {
-      return { success: false, message: `Fehler: ${error.message}` };
+      return { success: false, message: `${t('error')}: ${error.message}` };
     } finally {
       setIsLoading(false);
     }
@@ -221,30 +176,23 @@ function App({ user, onLogout }) {
 
   const formatAmount = (amount, type) => {
     const isWithdrawal = type === 'W';
-    const amountValue = isWithdrawal ? `-${amount}` : amount;
-
-    return (
-      <span style={{ color: isWithdrawal ? 'red' : 'inherit' }}>
-        {amountValue}
-      </span>
-    );
+    const formatted = isWithdrawal ? `-${amount}` : amount;
+    return <span style={{ color: isWithdrawal ? 'red' : 'inherit' }}>{formatted}</span>;
   };
 
   const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
+    setIsDropdownOpen(prev => !prev);
   };
 
-  const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+  const handleClickOutside = (e) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
       setIsDropdownOpen(false);
     }
   };
 
   useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
@@ -256,9 +204,17 @@ function App({ user, onLogout }) {
             <button className="user-icon-button" onClick={toggleDropdown}>👤</button>
             {isDropdownOpen && (
               <div className="dropdown-menu">
-                <div className="dropdown-item">{user?.username || 'Unbekannt'}</div>
-                <div className="dropdown-item">{user?.fullname || 'Unbekannt'}</div>
-                <button className="dropdown-item logout-button" onClick={handleLogout}>Abmelden</button>
+                <div className="dropdown-item">{user?.username || t('unknown')}</div>
+                <div className="dropdown-item">{user?.fullname || t('unknown')}</div>
+                <button
+                  className="dropdown-item logout-button"
+                  onClick={() => {
+                    onLogout();
+                    setIsDropdownOpen(false);
+                  }}
+                >
+                  {t('logout')}
+                </button>
               </div>
             )}
           </div>
@@ -276,9 +232,9 @@ function App({ user, onLogout }) {
           saldo={accountData.balance}
           isLoading={isLoading}
           error={error}
-          onRefresh={handleRefresh}
-          onDeposit={handleDeposit}
-          onWithdraw={handleWithdraw}
+          onRefresh={fetchAccountData}
+          onDeposit={() => setIsDepositModalOpen(true)}
+          onWithdraw={() => setIsWithdrawModalOpen(true)}
         />
 
         <DepositModal
@@ -299,25 +255,25 @@ function App({ user, onLogout }) {
           <table className="transactions-table">
             <thead>
               <tr>
-                <th>Text</th>
-                <th>Datum</th>
-                <th>Betrag</th>
-                <th>ID</th>
+                <th>{t('text')}</th>
+                <th>{t('date')}</th>
+                <th>{t('amount')}</th>
+                <th>{t('id')}</th>
               </tr>
             </thead>
             <tbody>
               {filteredTransactions.length > 0 ? (
-                filteredTransactions.map((transaction) => (
-                  <tr key={transaction.uuid}>
-                    <td>{transaction.text || ''}</td>
-                    <td>{new Date(transaction.transactionTimeStamp).toLocaleDateString()}</td>
-                    <td>{formatAmount(transaction.amount, transaction.transactionType)}</td>
-                    <td>{transaction.uuid.substring(0, 8)}...</td>
+                filteredTransactions.map((t) => (
+                  <tr key={t.uuid}>
+                    <td>{t.text}</td>
+                    <td>{new Date(t.transactionTimeStamp).toLocaleDateString()}</td>
+                    <td>{formatAmount(t.amount, t.transactionType)}</td>
+                    <td>{t.uuid.slice(0, 8)}...</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4">Keine Transaktionen vorhanden</td>
+                  <td colSpan="4">{t('noTransactions')}</td>
                 </tr>
               )}
             </tbody>
@@ -327,10 +283,10 @@ function App({ user, onLogout }) {
 
       <footer>
         <div className="footer-links">
-          <a href="#">Über Google</a>
-          <a href="#">Werbung</a>
-          <a href="#">Unternehmen</a>
-          <a href="#">Wie funktioniert die Google Suche?</a>
+          <a href="#">{t('aboutGoogle')}</a>
+          <a href="#">{t('ads')}</a>
+          <a href="#">{t('company')}</a>
+          <a href="#">{t('howSearchWorks')}</a>
         </div>
       </footer>
     </div>

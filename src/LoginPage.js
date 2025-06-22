@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './LoginPage.css';
 import Logo from './components/Logo';
+import { useTranslation } from 'react-i18next';
 
 function LoginPage({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,6 +11,7 @@ function LoginPage({ onLogin }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -195,7 +197,7 @@ function LoginPage({ onLogin }) {
       <div className="login-card">
         <div className="login-header">
           <Logo />
-          <h2>{isLogin ? 'Anmelden' : 'Registrieren'}</h2>
+          <h2>{isLogin ? t('login') : t('register')}</h2>
         </div>
 
         {error && <div className="error-message">{error}</div>}

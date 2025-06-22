@@ -1,0 +1,18 @@
+{
+  "login": "Anmelden",
+  "register": "Registrieren",
+  "username": "Benutzername",
+  "password": "Passwort",
+  "fullName": "Vollständiger Name",
+  "processing": "Wird verarbeitet...",
+  "createAccount": "Neuen Account erstellen",
+  "backToLogin": "Zurück zur Anmeldung",
+  "fillRequired": "Bitte alle Pflichtfelder ausfüllen",
+  "loginSuccess": "Anmeldung erfolgreich",
+  "invalidLogin": "Ungültige Anmeldedaten",
+  "registerSuccess": "Registrierung erfolgreich! Sie können sich jetzt anmelden.",
+  "registerFailed": "Registrierung fehlgeschlagen",
+  "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
+  "userNotFound": "Benutzer '{{username}}' nicht gefunden. Bitte registrieren Sie sich zuerst.",
+  "noAccountNumber": "Keine gültige Kontonummer gefunden"
+}

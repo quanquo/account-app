@@ -1,0 +1,18 @@
+{
+  "login": "Đăng nhập",
+  "register": "Đăng ký",
+  "username": "Tên người dùng",
+  "password": "Mật khẩu",
+  "fullName": "Họ và tên",
+  "processing": "Đang xử lý...",
+  "createAccount": "Tạo tài khoản mới",
+  "backToLogin": "Quay lại đăng nhập",
+  "fillRequired": "Vui lòng điền vào tất cả các trường bắt buộc",
+  "loginSuccess": "Đăng nhập thành công",
+  "invalidLogin": "Thông tin đăng nhập không hợp lệ",
+  "registerSuccess": "Đăng ký thành công! Bây giờ bạn có thể đăng nhập.",
+  "registerFailed": "Đăng ký thất bại",
+  "unexpectedError": "Đã xảy ra lỗi. Vui lòng thử lại sau.",
+  "userNotFound": "Không tìm thấy người dùng '{{username}}'. Vui lòng đăng ký trước.",
+  "noAccountNumber": "Không tìm thấy số tài khoản hợp lệ"
+}

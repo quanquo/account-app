@@ -309,7 +309,7 @@ function App({ user, onLogout }) {
               {filteredTransactions.length > 0 ? (
                 filteredTransactions.map((transaction) => (
                   <tr key={transaction.uuid}>
-                    <td>{transaction.text || '-'}</td>
+                    <td>{transaction.text || ''}</td>
                     <td>{new Date(transaction.transactionTimeStamp).toLocaleDateString()}</td>
                     <td>{formatAmount(transaction.amount, transaction.transactionType)}</td>
                     <td>{transaction.uuid.substring(0, 8)}...</td>

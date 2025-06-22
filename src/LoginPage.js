@@ -11,23 +11,21 @@ function LoginPage({ onLogin }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // Validierung für Login
     if (isLogin) {
       if (!username || !password) {
-        setError('Bitte alle Pflichtfelder ausfüllen');
+        setError(t('fillRequired'));
         return;
       }
     } else {
-      // Validierung für Registrierung
       if (!username || !fullName) {
-        setError('Bitte alle Pflichtfelder ausfüllen');
+        setError(t('fillRequired'));
         return;
       }
     }
@@ -36,39 +34,29 @@ function LoginPage({ onLogin }) {
 
     try {
       if (isLogin) {
-        // Zunächst Login-Credentials überprüfen
         if (username === username && password === 'admin') {
           try {
-            // API aufrufen, um die Kontonummer des Benutzers zu erhalten
             const userApiUrl = `http://localhost:8080/api/users/${username}`;
             const userResponse = await fetch(userApiUrl);
 
             if (!userResponse.ok) {
               const errorText = await userResponse.text();
-              
-              // Wenn User API fehlschlägt, dann ist das ein echter Fehler
               if (userResponse.status === 404) {
-                throw new Error(`Benutzer '${username}' nicht gefunden. Bitte registrieren Sie sich zuerst.`);
+                throw new Error(t('userNotFound', { username }));
               } else if (userResponse.status >= 500) {
-                throw new Error('Server ist nicht erreichbar. Bitte versuchen Sie es später erneut.');
+                throw new Error(t('unexpectedError'));
               } else {
-                throw new Error(`Fehler beim Abrufen der Benutzerdaten: ${userResponse.status} - ${errorText}`);
+                throw new Error(`API-Fehler: ${userResponse.status} - ${errorText}`);
               }
             }
 
             const userData = await userResponse.json();
-
             let fullname = userData.name;
-            
-            // Extract account number from the API response structure
             let accountNumber = null;
-            
-            // Check for bankAccount.accountNumber (based on your API response)
+
             if (userData.bankAccount && userData.bankAccount.accountNumber) {
               accountNumber = userData.bankAccount.accountNumber;
-            }
-            // Fallback checks for other possible structures
-            else if (userData.accountNumber) {
+            } else if (userData.accountNumber) {
               accountNumber = userData.accountNumber;
             } else if (userData.accountId) {
               accountNumber = userData.accountId;
@@ -80,103 +68,70 @@ function LoginPage({ onLogin }) {
               accountNumber = userData.userId;
             } else if (userData.kontonummer) {
               accountNumber = userData.kontonummer;
-            }
-            // Check nested account objects
-            else if (userData.account) {
-              if (typeof userData.account === 'object') {
-                accountNumber = userData.account.accountNumber || 
-                              userData.account.accountId || 
-                              userData.account.id || 
-                              userData.account.number;
-              }
-            }
-            // Check if accounts is an array
-            else if (userData.accounts && Array.isArray(userData.accounts)) {
-              if (userData.accounts.length > 0) {
-                const firstAccount = userData.accounts[0];
-                accountNumber = firstAccount.accountNumber || 
-                              firstAccount.accountId || 
-                              firstAccount.id || 
-                              firstAccount.number;
-              }
+            } else if (userData.account && typeof userData.account === 'object') {
+              accountNumber = userData.account.accountNumber || userData.account.accountId || userData.account.id || userData.account.number;
+            } else if (Array.isArray(userData.accounts) && userData.accounts.length > 0) {
+              const firstAccount = userData.accounts[0];
+              accountNumber = firstAccount.accountNumber || firstAccount.accountId || firstAccount.id || firstAccount.number;
             }
 
-            // Wenn immer noch keine Kontonummer gefunden wurde
-            if (!accountNumber || accountNumber === '') {
-              throw new Error('Keine Kontonummer für diesen Benutzer gefunden. Bitte wenden Sie sich an den Administrator.');
-            }
-
-            // Verify the account number is valid (not empty, null, undefined)
             if (!accountNumber || accountNumber === '' || accountNumber === 'null' || accountNumber === 'undefined') {
-              throw new Error('Keine gültige Kontonummer gefunden');
+              throw new Error(t('noAccountNumber'));
             }
 
-            setSuccess('Anmeldung erfolgreich');
+            setSuccess(t('loginSuccess'));
             setTimeout(() => {
               onLogin({
                 username,
                 fullname,
-                accountNumber: String(accountNumber) // Ensure it's a string
+                accountNumber: String(accountNumber)
               });
             }, 1000);
-
           } catch (error) {
             setError(error.message);
           }
         } else {
-          setError('Ungültige Anmeldedaten');
+          setError(t('invalidLogin'));
         }
       } else {
-        // Bei Registrierung
         try {
-          // Schritt 1: User anlegen
           const registerResponse = await fetch('http://localhost:8080/api/users', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              username,
-              name: fullName
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, name: fullName })
           });
 
           if (!registerResponse.ok) {
-            throw new Error(`Benutzer-Registrierung fehlgeschlagen: ${registerResponse.statusText}`);
+            throw new Error(`${t('registerFailed')}: ${registerResponse.statusText}`);
           }
 
-          // Schritt 2: Account für den User anlegen
-          // Generiere zufällige 10-stellige Kontonummer
           const accountNumber = Math.floor(1000000000 + Math.random() * 9000000000);
 
           const accountResponse = await fetch('http://localhost:8080/api/accounts', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               username,
-              accountNumber: accountNumber,
+              accountNumber,
               description: "Basic Account",
               cashBalance: 0
             })
           });
 
           if (!accountResponse.ok) {
-            throw new Error(`Account-Erstellung fehlgeschlagen: ${accountResponse.statusText}`);
+            throw new Error(`${t('registerFailed')}: ${accountResponse.statusText}`);
           }
 
-          setSuccess('Registrierung erfolgreich! Sie können sich jetzt anmelden.');
+          setSuccess(t('registerSuccess'));
           setIsLogin(true);
           setUsername('');
           setFullName('');
         } catch (error) {
-          setError(`Registrierung fehlgeschlagen: ${error.message}`);
+          setError(`${t('registerFailed')}: ${error.message}`);
         }
       }
-
     } catch (err) {
-      setError('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
+      setError(t('unexpectedError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -186,14 +141,25 @@ function LoginPage({ onLogin }) {
     setIsLogin(!isLogin);
     setError('');
     setSuccess('');
-    // Reset all form fields when switching modes
     setUsername('');
     setPassword('');
     setFullName('');
   };
 
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+    localStorage.setItem('lng', lng);
+  };
+
   return (
     <div className="login-container">
+
+      <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+        <button onClick={() => changeLanguage('de')} disabled={i18n.language === 'de'}>DE</button>
+        <button onClick={() => changeLanguage('en')} disabled={i18n.language === 'en'} style={{ marginLeft: '0.5rem' }}>EN</button>
+        <button onClick={() => changeLanguage('vi')} disabled={i18n.language === 'vi'} style={{ marginLeft: '0.5rem' }}>VI</button>
+      </div>
+
       <div className="login-card">
         <div className="login-header">
           <Logo />
@@ -205,7 +171,7 @@ function LoginPage({ onLogin }) {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="username">Benutzername:</label>
+            <label htmlFor="username">{t('username')}:</label>
             <input
               type="text"
               id="username"
@@ -218,7 +184,7 @@ function LoginPage({ onLogin }) {
 
           {isLogin ? (
             <div className="form-group">
-              <label htmlFor="password">Passwort:</label>
+              <label htmlFor="password">{t('password')}:</label>
               <input
                 type="password"
                 id="password"
@@ -230,7 +196,7 @@ function LoginPage({ onLogin }) {
             </div>
           ) : (
             <div className="form-group">
-              <label htmlFor="fullName">Vollständiger Name:</label>
+              <label htmlFor="fullName">{t('fullName')}:</label>
               <input
                 type="text"
                 id="fullName"
@@ -249,8 +215,8 @@ function LoginPage({ onLogin }) {
               disabled={isSubmitting}
             >
               {isSubmitting
-                ? 'Wird verarbeitet...'
-                : isLogin ? 'Anmelden' : 'Registrieren'}
+                ? t('processing')
+                : isLogin ? t('login') : t('register')}
             </button>
           </div>
         </form>
@@ -261,9 +227,7 @@ function LoginPage({ onLogin }) {
             onClick={toggleLoginMode}
             disabled={isSubmitting}
           >
-            {isLogin
-              ? 'Neuen Account erstellen'
-              : 'Zurück zur Anmeldung'}
+            {isLogin ? t('createAccount') : t('backToLogin')}
           </button>
         </div>
       </div>

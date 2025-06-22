@@ -1,0 +1,18 @@
+{
+  "login": "Login",
+  "register": "Regiter",
+  "username": "Username",
+  "password": "Password",
+  "fullName": "Full Name",
+  "processing": "ia being processing...",
+  "createAccount": "Create New Account",
+  "backToLogin": "Back to login",
+  "fillRequired": "Please fill all required fields",
+  "loginSuccess": "Login successful",
+  "invalidLogin": "Invalid login credentials",
+  "registerSuccess": "Registration successful! You can now log in.",
+  "registerFailed": "Registration failed",
+  "unexpectedError": "An unexpected error occurred. Please try again later.",
+  "userNotFound": "User '{{username}}' not found. Please register first.",
+  "noAccountNumber": "No valid account number found"
+}
